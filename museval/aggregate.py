@@ -1,3 +1,5 @@
+import matplotlib.axes
+import matplotlib.pyplot as plt
 import pandas
 from pathlib import Path
 import pandas as pd
@@ -10,6 +12,7 @@ import os
 from .version import _version
 from decimal import Decimal as D
 import numpy as np
+from sklearn.metrics import ConfusionMatrixDisplay
 
 
 class TrackStore(object):
@@ -64,11 +67,8 @@ class TrackStore(object):
                 "time": i * self.hop,
                 "duration": self.win,
                 "metrics": {
-                    "SDR": self._q(values["SDR"][i]),
-                    "SIR": self._q(values["SIR"][i]),
-                    "SAR": self._q(values["SAR"][i]),
-                    "ISR": self._q(values["ISR"][i]),
-                },
+                    metric: self._q(score[i]) for metric, score in values.items()
+                }
             }
             target_data["frames"].append(frame_data)
 
@@ -106,12 +106,14 @@ class TrackStore(object):
         Returns
         ----------
         str
-            frames_aggreagted values of all target metrics
+            frames_aggregated values of all target metrics
         """
+        target_names = [t["name"] for t in self.scores["targets"]]
+        metrics = [metric for metric in self.scores["targets"][0]["frames"][0]["metrics"]]
         out = ""
         for t in self.scores["targets"]:
             out += t["name"].ljust(16) + "==> "
-            for metric in ["SDR", "SIR", "ISR", "SAR"]:
+            for metric in metrics:
                 out += (
                     metric
                     + ":"
@@ -125,12 +127,43 @@ class TrackStore(object):
             out += "\n"
         return out
 
+    def bleeding_matrix(self, axes=None):
+        """
+        Plots the SSIR bleeding matrix for a single track
+        """
+        target_names = [t["name"] for t in self.scores["targets"]]
+        matrix = np.zeros([len(target_names), len(target_names)])
+        for target_index, t in enumerate(self.scores["targets"]):
+            for index, interference in enumerate(target_names):
+                matrix[target_index, index] = self.frames_agg(
+                    [float(f["metrics"][interference + "_SSIR"]) for f in t["frames"]]
+                )
+
+        # As diagonal is not necessary, fill it with NaN-values as to be set as "empty" later.
+        np.fill_diagonal(matrix, np.nan)
+
+        if axes is None:
+            fig, axes = plt.subplots()
+
+        # ConfusionMatrixDisplay is modified to not display NaN-values and thus, sets diagonal as white.
+        # line 160: thresh = (np.nanmax(cm) + np.nanmin(cm)) / 2.0
+        # line 177: if text_cm == "nan":
+        #               text_cm = ""
+        disp = ConfusionMatrixDisplay(confusion_matrix=matrix,
+                                      display_labels=target_names)
+        disp.plot(ax=axes,
+                  values_format=".2f",
+                  cmap="inferno")
+        axes.set_title(self.track_name)
+        axes.set_xlabel("Interference")
+        axes.set_ylabel("Target")
+
     def validate(self):
         """Validate scores against `musdb.schema`"""
         return validate(self.scores, self.schema)
 
     def _q(self, number, precision=".00001"):
-        """quantiztion of BSSEval values"""
+        """Quantization of BSSEval values"""
         if np.isinf(number):
             return np.nan
         else:
@@ -254,12 +287,13 @@ class EvalStore(object):
 
     def __repr__(self):
         targets = self.df["target"].unique()
-        out = "Aggrated Scores ({} over frames, {} over tracks)\n".format(
+        metrics = self.df["metric"].unique()
+        out = "Aggregated Scores ({} over frames, {} over tracks)\n".format(
             self.frames_agg, self.tracks_agg
         )
         for target in targets:
             out += target.ljust(16) + "==> "
-            for metric in ["SDR", "SIR", "ISR", "SAR"]:
+            for metric in metrics:
                 out += (
                     metric
                     + ":"
@@ -271,6 +305,37 @@ class EvalStore(object):
             out += "\n"
         return out
 
+    def bleeding_matrix(self, axes=None):
+        """
+        Plots the SSIR bleeding matrix for a whole collection
+        """
+        target_names = self.df["target"].unique()
+        matrix = np.zeros([len(target_names), len(target_names)])
+        agg_tracks = self.agg_frames_tracks_scores().unstack()
+        for target_index, t in enumerate(target_names):
+            for index, interference in enumerate(target_names):
+                matrix[target_index, index] = agg_tracks[interference + "_SSIR"][t]
+
+        # As diagonal is not necessary, fill it with NaN-values as to be set as "empty" later.
+        np.fill_diagonal(matrix, np.nan)
+
+        if axes is None:
+            fig, axes = plt.subplots()
+
+        # ConfusionMatrixDisplay is modified to not display NaN-values and thus, sets diagonal as white.
+        # line 160: thresh = (np.nanmax(cm) + np.nanmin(cm)) / 2.0
+        # line 177: if text_cm == "nan":
+        #               text_cm = ""
+        disp = ConfusionMatrixDisplay(confusion_matrix=matrix,
+                                      display_labels=target_names)
+        disp.plot(ax=axes,
+                  values_format=".2f",
+                  cmap="inferno")
+        axes.set_title("Aggregated Scores ({} over frames, {} over tracks)\n".format(
+            self.frames_agg, self.tracks_agg
+        ))
+        axes.set_xlabel("Interference")
+        axes.set_ylabel("Target")
 
 class MethodStore(object):
     """
@@ -412,13 +477,14 @@ def json2df(json_string, track_name):
     df = pd.json_normalize(json_string["targets"], ["frames"], ["name"])
 
     df.columns = [col.replace("metrics.", "") for col in df.columns]
+    metrics = [metric for metric in json_string["targets"][0]["frames"][0]["metrics"]]
 
     df = pd.melt(
         df,
         var_name="metric",
         value_name="score",
         id_vars=["time", "name"],
-        value_vars=["SDR", "SAR", "ISR", "SIR"],
+        value_vars=metrics,
     )
     df["track"] = track_name
     df = df.rename(index=str, columns={"name": "target"})

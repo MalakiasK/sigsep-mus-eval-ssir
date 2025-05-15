@@ -87,7 +87,7 @@ def eval_dir(
         global_rate = rate
         estimates.append(ref_audio)
 
-    SDR, ISR, SIR, SAR = evaluate(
+    SDR, ISR, SIR, SAR, SSIR = evaluate(
         reference,
         estimates,
         win=int(win * global_rate),
@@ -101,6 +101,9 @@ def eval_dir(
             "ISR": ISR[i].tolist(),
             "SAR": SAR[i].tolist(),
         }
+        values.update({
+            interference + "_SSIR": SSIR[i][j] for j, interference in enumerate(eval_targets)
+        })
 
         data.add_target(target_name=target, values=values)
 
@@ -190,7 +193,7 @@ def eval_mus_track(track, user_estimates, output_dir=None, mode="v4", win=1.0, h
             audio_estimates.append(user_estimates[target])
             audio_reference.append(track.targets[target].audio)
 
-        SDR, ISR, SIR, SAR = evaluate(
+        SDR, ISR, SIR, SAR, SSIR = evaluate(
             audio_reference,
             audio_estimates,
             win=int(win * track.rate),
@@ -209,6 +212,9 @@ def eval_mus_track(track, user_estimates, output_dir=None, mode="v4", win=1.0, h
                 "ISR": ISR[i].tolist(),
                 "SAR": SAR[i].tolist(),
             }
+            values.update({
+                interference + "_SSIR": SSIR[i][j] for j, interference in enumerate(eval_targets)
+            })
 
             data.add_target(target_name=target, values=values)
     elif not has_acc:
@@ -230,7 +236,7 @@ def eval_mus_track(track, user_estimates, output_dir=None, mode="v4", win=1.0, h
             audio_estimates.append(user_estimates[target])
             audio_reference.append(track.targets[target].audio)
 
-        SDR, ISR, SIR, SAR = evaluate(
+        SDR, ISR, SIR, SAR, SSIR = evaluate(
             audio_reference,
             audio_estimates,
             win=int(win * track.rate),
@@ -246,6 +252,9 @@ def eval_mus_track(track, user_estimates, output_dir=None, mode="v4", win=1.0, h
                 "ISR": ISR[i].tolist(),
                 "SAR": SAR[i].tolist(),
             }
+            values.update({
+                interference + "_SSIR": SSIR[i][j] for j, interference in enumerate(eval_targets)
+            })
 
             data.add_target(target_name=target, values=values)
 
@@ -329,6 +338,8 @@ def evaluate(
         vector of Source to Interference Ratios (SIR)
     SAR : np.ndarray, shape=(nsrc,)
         vector of Sources to Artifacts Ratios (SAR)
+    SSIR : np.ndarray, shape=(nsrc, nsrc,)
+        vector of Source-to-Single-Interference Ratios (SSIR)
     """
 
     estimates = np.array(estimates)
@@ -337,7 +348,7 @@ def evaluate(
     if padding:
         references, estimates = pad_or_truncate(references, estimates)
 
-    SDR, ISR, SIR, SAR, _ = metrics.bss_eval(
+    SDR, ISR, SIR, SAR, _, SSIR = metrics.bss_eval(
         references,
         estimates,
         compute_permutation=False,
@@ -347,4 +358,4 @@ def evaluate(
         bsseval_sources_version=False,
     )
 
-    return SDR, ISR, SIR, SAR
+    return SDR, ISR, SIR, SAR, SSIR

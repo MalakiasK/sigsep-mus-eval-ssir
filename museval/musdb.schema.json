@@ -37,6 +37,18 @@
                     },
                     "ISR": {
                       "type": "number"
+                    },
+                    "VOCALS": {
+                      "type": "number"
+                    },
+                    "DRUMS": {
+                      "type": "number"
+                    },
+                    "BASS": {
+                      "type": "number"
+                    },
+                    "OTHER": {
+                      "type": "number"
                     }
                   }
                 }

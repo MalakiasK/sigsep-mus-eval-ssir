@@ -225,6 +225,8 @@ def bss_eval(
           to true source number ``j`` at window ``t``).
           Note: ``perm`` will be ``(0,2,...,nsrc-1)`` if ``compute_permutation``
           is ``False``.
+      ssir : np.ndarray, shape=(nsrc, nsrc, nwin)
+          matrix of Source-to-Single-Interference Ratios (SSIR).
 
       References
       ----------
@@ -263,6 +265,7 @@ def bss_eval(
 
     (SDR, ISR, SIR, SAR) = list(range(4))
     s_r = np.empty((4, nsrc, nsrc, nwin))
+    ssir = np.empty((nsrc, nsrc, nsrc, nwin))
 
     # define helper functions for computing filters on windows of the signals
     def compute_GsfC(win=slice(0, nsampl)):
@@ -316,11 +319,21 @@ def bss_eval(
                         s_r[:, jtrue, jest, t] = _bss_crit(
                             s_true, e_spat, e_interf, e_artif, bsseval_sources_version
                         )
+                        e_interfs = _bss_decomp_mtifilt_single(
+                            reference_sources[:, win],
+                            C[jest],
+                            jtrue,
+                        )
+                        ssir[:, jtrue, jest, t] = _bss_crit_interf(s_true, e_spat, e_interfs)
+                        ssir[jtrue, jtrue, jest, t] = 0 # a track doesn't have interference with itself
                         done[jtrue, jest] = True
         else:
             a = np.empty((4, nsrc, nsrc))
             a[:] = np.nan
             s_r[:, :, :, t] = a
+            b = np.empty((nsrc, nsrc, nsrc))
+            b[:] = np.nan
+            ssir[:, :, :, t] = b
 
     # select the best ordering
     if framewise_filters:
@@ -340,12 +353,16 @@ def bss_eval(
     # now prepare the output
     if not framewise_filters:
         result = s_r[:, dum, popt[:, 0], :]
+        result_ssir = ssir[:, dum, popt[:, 0], :]
     else:
         result = np.empty((4, nsrc, nwin))
+        result_ssir = np.empty((nsrc, nsrc, nwin))
         for m, t in itertools.product(list(range(4)), list(range(nwin))):
             result[m, :, t] = s_r[m, dum, popt[:, t], t]
+        for m, t in itertools.product(list(range(nsrc)), list(range(nwin))):
+            result_ssir[m, :, t] = ssir[m, dum, popt[:, t], t]
 
-    return (result[SDR], result[ISR], result[SIR], result[SAR], popt)
+    return (result[SDR], result[ISR], result[SIR], result[SAR], popt, result_ssir)
 
 
 def bss_eval_sources(reference_sources, estimated_sources, compute_permutation=True):
@@ -500,6 +517,12 @@ def _bss_decomp_mtifilt(reference_sources, estimated_source, j, C, Cj):
 
     return (s_true, e_spat, e_interf, e_artif)
 
+def _bss_decomp_mtifilt_single(reference_sources, C, j):
+    """Decomposition of an estimated source image into nsrc components
+    representing interferences form one source to another."""
+    # compute appropriate projections
+    s_interfs = _project_s(reference_sources, C)
+    return s_interfs
 
 def _zeropad(sig, N, axis=0):
     """pads with N zeros at the end of the signal, along given axis"""
@@ -632,6 +655,41 @@ def _project(reference_sources, C):
         ]
     return sproj.T
 
+def _project_s(reference_sources, C):
+    """Project images using pre-computed filters C
+    reference_sources are nsrc X nsampl X nchan
+    C is nsrc X nchan X filters_len X nchan
+    """
+    # shapes: ensure that input is 3d (comprising the source index)
+    if len(reference_sources.shape) == 2:
+        reference_sources = reference_sources[None, ...]
+        C = C[None, ...]
+
+    (nsrc, nsampl, nchan) = reference_sources.shape
+    filters_len = C.shape[-2]
+
+    # zero pad
+    reference_sources = _zeropad(reference_sources, filters_len - 1, axis=1)
+    sproj = np.zeros((nsrc, nchan, nsampl + filters_len - 1))
+
+    for j, cj, c in itertools.product(
+        list(range(nsrc)), list(range(nchan)), list(range(nchan))
+    ):
+        sproj[j, c] += fftconvolve(C[j, cj, :, c], reference_sources[j, :, cj])[
+            : nsampl + filters_len - 1
+        ]
+    return np.transpose(sproj, [0, 2, 1])
+
+def _bss_crit_interf(s_true, e_spat, e_interf_s):
+    """Measurement of the separation quality for a given source in terms of
+    interference from one source to another."""
+    nsrc = e_interf_s.shape[0]
+    # energy ratios
+    ssir = np.zeros((nsrc))
+    for i in range(nsrc):
+        ssir[i] = _safe_db(np.sum((s_true + e_spat) ** 2), np.sum(e_interf_s[i] ** 2))
+
+    return ssir
 
 def _bss_crit(s_true, e_spat, e_interf, e_artif, bsseval_sources_version):
     """Measurement of the separation quality for a given source in terms of
