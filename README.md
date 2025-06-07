@@ -44,7 +44,7 @@ def estimate_and_evaluate(track):
     }
 
     # Evaluate using museval-ssir
-    scores = museval.eval_mus_track(
+    scores = museval-ssir.eval_mus_track(
         track, estimates, output_dir="path/to/json"
     )
 
