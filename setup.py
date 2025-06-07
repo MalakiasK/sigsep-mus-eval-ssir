@@ -2,27 +2,27 @@ import setuptools
 from importlib.machinery import SourceFileLoader
 
 version = SourceFileLoader(
-    'museval.version', 'museval/version.py'
+    'museval-ssir.version', 'museval-ssir/version.py'
 ).load_module()
 
-with open('README.md', 'r') as fdesc:
+with open('README_legacy.md', 'r') as fdesc:
     long_description = fdesc.read()
 
 if __name__ == "__main__":
     setuptools.setup(
         # Name of the project
-        name='museval',
+        name='museval-ssir',
 
         # Version
         version=version._version,
 
         # Description
-        description='Evaluation tools for the SIGSEP MUS database',
-        url='https://github.com/sigsep/sigsep-mus-eval',
+        description='Modified evaluation tools for the SIGSEP MUS database',
+        url='https://github.com/MalakiasK/sigsep-mus-eval-ssir',
 
         # Your contact information
-        author='Fabian-Robert Stoeter',
-        author_email='mail@faroit.com',
+        author='Malakias Kosonen',
+        author_email='malakias.kosonen@tuni.fi',
 
         # License
         license='MIT',
@@ -49,11 +49,13 @@ if __name__ == "__main__":
             'scipy',
             'simplejson>=3.19.0',
             'soundfile',
-            'jsonschema'
+            'jsonschema',
+            'matplotlib',
+            'scikit-learn'
         ],
 
         package_data={
-            'museval': ['musdb.schema.json'],
+            'museval-ssir': ['musdb.schema.json'],
         },
 
         extras_require={  # Optional
