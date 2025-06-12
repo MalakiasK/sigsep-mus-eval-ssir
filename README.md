@@ -1,9 +1,5 @@
 # museval-ssir
 
-[![Build Status](https://github.com/sigsep/sigsep-mus-eval/workflows/CI/badge.svg)](https://github.com/sigsep/sigsep-mus-eval/actions?query=workflow%3ACI+branch%3Amaster+event%3Apush)
-[![Latest Version](https://img.shields.io/pypi/v/museval.svg)](https://pypi.python.org/pypi/museval)
-[![Supported Python versions](https://img.shields.io/pypi/pyversions/museval.svg)](https://pypi.python.org/pypi/museval)
-
 A python package to evaluate source separation results using the [MUSDB18](https://sigsep.github.io/musdb) dataset.
 This package is a modified version of [sigsep-mus-eval](https://github.com/sigsep/sigsep-mus-eval), which itself is an implementation of BSSEval v4.
 More information about the original version can be found in their respective github or in the README_legacy.md.
