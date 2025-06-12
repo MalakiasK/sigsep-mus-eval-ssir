@@ -12,16 +12,16 @@ SSIR gives information about how much each source contribute to the interference
 
 ## Installation
 
-You can install the `museval-ssir` parsing package using pip:
+You can install the `musevalssir` parsing package using pip:
 
 ```bash
-pip install museval-ssir
+pip install musevalssir
 ```
 
 ## Usage
 
 The purpose of this package is to evaluate source separation results and generate bleeding matrices as well as write out validated `json` files.
-`museval-ssir` is designed to work in conjuction with the [musdb](https://github.com/sigsep/sigsep-mus-db) tools and the MUSDB18 dataset (however, `museval-ssir` can also be used without `musdb`).
+`musevalssir` is designed to work in conjuction with the [musdb](https://github.com/sigsep/sigsep-mus-db) tools and the MUSDB18 dataset (however, `museval-ssir` can also be used without `musdb`).
 
 ### Separate MUSDB18 tracks and Evaluate on-the-fly
 
@@ -30,7 +30,7 @@ Here is an example for such a function separating the mixture into a __vocals__ 
 
 ```python
 import musdb
-import museval-ssir
+import musevalssir
 
 def estimate_and_evaluate(track):
     # Assume mix as estimates
@@ -39,8 +39,8 @@ def estimate_and_evaluate(track):
         'accompaniment': track.audio
     }
 
-    # Evaluate using museval-ssir
-    scores = museval-ssir.eval_mus_track(
+    # Evaluate using musevalssir
+    scores = musevalssir.eval_mus_track(
         track, estimates, output_dir="path/to/json"
     )
 
@@ -56,7 +56,7 @@ for track in mus:
     estimate_and_evaluate(track)
 
 ```
-Make sure `output_dir` is set. `museval-ssir` will recreate the `musdb` file structure in that folder and write the evaluation results to this folder.
+Make sure `output_dir` is set. `musevalssir` will recreate the `musdb` file structure in that folder and write the evaluation results to this folder.
 
 ### Example results
 
