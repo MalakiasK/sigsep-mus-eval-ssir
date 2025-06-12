@@ -58,6 +58,52 @@ for track in mus:
 ```
 Make sure `output_dir` is set. `musevalssir` will recreate the `musdb` file structure in that folder and write the evaluation results to this folder.
 
+### Evaluate MUSDB18 tracks later
+
+If you have already computed your estimates, we provide you with an easy-to-use function to process evaluation results afterwards.
+This function won't output bleeding matrices as plots but will only write the data into the json.
+
+Simply use the `musevalssir.eval_mus_dir` to evaluate your `estimates_dir` and write the results into the `output_dir`. For convenience, the `eval_mus_dir` function accepts all parameters of the `musdb.run()`.
+
+```python
+import musdb
+import musevalssir
+
+# initiate musdb
+mus = musdb.DB()
+
+# evaluate an existing estimate folder with wav files
+musevalssir.eval_mus_dir(
+    dataset=mus,  # instance of musdb
+    estimates_dir=...,  # path to estimate folder
+    output_dir=...,  # set a folder to write eval json files
+    ext='wav
+)
+```
+
+### Aggregate and Analyze Scores
+
+Scores for each track can also be aggregated in a pandas DataFrame for easier analysis or the creation of boxplots.
+To aggregate multiple tracks in a DataFrame, create `musevalssir.EvalStore()` object and add the track scores successively.
+
+```python
+results = musevalssir.EvalStore(frames_agg='median', tracks_agg='median')
+for track in tracks:
+    # ...
+    results.add_track(musevalssir.eval_mus_track(track, estimates).df)
+```
+
+You may also add scores that have been computed beforehand through `museval.eval_mus_dir`:
+```python
+results = musevalssir.EvalStore(frames_agg='median', tracks_agg='median')
+results.add_eval_dir(
+    path=...# path to the output_dir for eval_mus_dir
+)
+```
+
+When all tracks have been added, the aggregated scores can be shown using `print(results)` and the bleeding matrix with `results.bleeding_matrix()` and results may be saved as a pandas DataFrame `results.save('my_method.pandas')`.
+
+
 ### Example results
 
 The following bleeding matrix is a result from the results of using HT Demucs from [Demucs](https://github.com/adefossez/demucs) to perform source separation on the [MUSDB18](https://sigsep.github.io/musdb) dataset:
