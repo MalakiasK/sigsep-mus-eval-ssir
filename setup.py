@@ -2,7 +2,7 @@ import setuptools
 from importlib.machinery import SourceFileLoader
 
 version = SourceFileLoader(
-    'museval-ssir.version', 'museval-ssir/version.py'
+    'musevalssir.version', 'musevalssir/version.py'
 ).load_module()
 
 with open('README_legacy.md', 'r') as fdesc:
@@ -11,7 +11,7 @@ with open('README_legacy.md', 'r') as fdesc:
 if __name__ == "__main__":
     setuptools.setup(
         # Name of the project
-        name='museval-ssir',
+        name='musevalssir',
 
         # Version
         version=version._version,
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         ],
 
         package_data={
-            'museval-ssir': ['musdb.schema.json'],
+            'museval': ['musdb.schema.json'],
         },
 
         extras_require={  # Optional
